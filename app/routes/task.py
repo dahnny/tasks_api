@@ -123,6 +123,60 @@ def get_task(
     
     return db_task
 
+@router.get("/", response_model=list[TaskResponse])
+def get_tasks(
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+    limit: int = 10,
+    skip: int = 0
+) -> list[TaskResponse]:
+    """
+    Retrieve a paginated list of tasks for the authenticated user.
+    
+    This endpoint returns all tasks belonging to the currently authenticated user
+    with pagination support. Only tasks owned by the authenticated user are returned,
+    ensuring data privacy and security.
+    
+    Args:
+        db (Session): Database session dependency
+        current_user (User): Authenticated user from JWT token
+        limit (int, optional): Maximum number of tasks to return. Defaults to 10.
+        skip (int, optional): Number of tasks to skip for pagination. Defaults to 0.
+        
+    Returns:
+        list[TaskResponse]: List of task objects belonging to the authenticated user
+        
+    Raises:
+        HTTPException: 401 Unauthorized if user is not authenticated
+        
+    Example:
+        GET /tasks/?limit=20&skip=0
+        Response: [
+            {
+                "id": 1,
+                "title": "Complete project",
+                "description": "Finish the API documentation",
+                "status": "INCOMPLETE",
+                "due_date": "2024-12-31T23:59:59",
+                "created_at": "2023-...",
+                "updated_at": "2023-..."
+            },
+            {
+                "id": 2,
+                "title": "Review code",
+                "description": "Code review for new features",
+                "status": "COMPLETE",
+                "due_date": "2024-12-30T18:00:00",
+                "created_at": "2023-...",
+                "updated_at": "2023-..."
+            }
+        ]
+        
+    """
+    tasks = db.query(Task).filter(Task.owner_id == current_user.id)
+    tasks = tasks.limit(limit).offset(skip).all()
+    return tasks
+
 
 @router.put("/{task_id}", response_model=TaskResponse)
 def update_task(
